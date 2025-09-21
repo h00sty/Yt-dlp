@@ -1,47 +1,29 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 import yt_dlp
 
 app = FastAPI()
 
-def extract_text_from_tracks(tracks: dict) -> str:
-    """
-    Собирает субтитры в один текст из формата json3 или vtt (если есть url).
-    В yt-dlp info -> subtitles / automatic_captions только ссылки, поэтому
-    мы возвращаем список доступных дорожек как есть.
-    Для простоты: просто берём ключи языков.
-    """
-    if not tracks:
-        return ""
-    # Здесь можно дописать скачивание и парсинг VTT, если нужно полный текст
-    return " | ".join(tracks.keys())
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
-@app.get("/get_subs")
-def get_subs(video_id: str):
+@app.get("/subtitles/{video_id}")
+def get_subtitles(video_id: str):
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
         "skip_download": True,
-        "writesubtitles": True,
         "writeautomaticsub": True,
         "subtitleslangs": ["en", "ru"],
-        "subtitlesformat": "json3"
+        "subtitlesformat": "vtt",
+        "quiet": True,
+        "dump_single_json": True,
     }
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
 
-        manual = info.get("subtitles", {})
-        auto = info.get("automatic_captions", {})
-
-        # Пока делаем упрощённый transcript: список языков
-        transcript_text = extract_text_from_tracks(manual) or extract_text_from_tracks(auto)
-
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
         return {
             "title": info.get("title"),
-            "videoId": video_id,
-            "transcript": transcript_text,
-            "subtitles": manual,
-            "autoSubtitles": auto
+            "id": info.get("id"),
+            "subtitles": info.get("subtitles"),
+            "automatic_captions": info.get("automatic_captions"),
         }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
