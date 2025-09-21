@@ -12,11 +12,11 @@ def get_subtitles(video_id: str):
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
         "skip_download": True,
+        "writesubtitles": True,
         "writeautomaticsub": True,
         "subtitleslangs": ["en", "ru"],
         "subtitlesformat": "vtt",
-        "quiet": True,
-        "dump_single_json": True,
+        "cookiefile": "youtube_cookies.txt"
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -27,3 +27,5 @@ def get_subtitles(video_id: str):
             "subtitles": info.get("subtitles"),
             "automatic_captions": info.get("automatic_captions"),
         }
+
+
